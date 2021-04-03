@@ -381,6 +381,9 @@ public:
     /// \param[in] forward void-returning procedure that will make a forward step
     /// \param[in] backward void-returning procedure that will make a backward step
     AccelStepper(void (*forward)(), void (*backward)());
+
+    /// sets pin modes for 2 pin driver and hall sensor with external pull up resistor
+    void    setPinModesDriver();
     
     /// Set the target position. The run() function will try to move the motor (at most one step per call)
     /// from the current position to the target position set by the most

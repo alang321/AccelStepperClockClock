@@ -753,6 +753,13 @@ boolean AccelStepper::runZeroing()
     return false;
 }
 
+void AccelStepper::setPinModesDriver()
+{
+    pinMode(pin[0], OUTPUT);
+    pinMode(pin[1], OUTPUT);
+    pinMode(hallPin, INPUT);
+}
+
 bool AccelStepper::isRunning()
 {
     return !(_speed == 0.0 && _targetPos == _currentPos);
