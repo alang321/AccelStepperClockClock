@@ -30,6 +30,62 @@ void AccelStepper::moveTo(long absolute)
     }
 }
 
+void AccelStepper::moveToSingleRevolution(long absolute)
+{
+    absolute = absolute % stepsPerRevolution;
+    //to deal with negative absolute positions
+    if(absolute < 0){
+        absolute = stepsPerRevolution - absolute;
+    }
+
+    short relCurrentPos = _currentPos % stepsPerRevolution;
+
+    //to deal with negative current positions
+    if(relCurrentPos < 0){
+        relCurrentPos = stepsPerRevolution - relCurrentPos;
+    }
+
+    short relative = absolute - relCurrentPos;
+
+    //non fixed direction
+    //if bigger than semi circle in cw direction move ccw
+    if (relative > stepsPerRevolution/2){
+        relative = relative - stepsPerRevolution;
+    }
+    //if bigger than semi circle in ccw direction move cw
+    else if (relative < -stepsPerRevolution/2){
+        relative = relative + stepsPerRevolution;
+    }
+
+    move(relative);
+}
+
+void AccelStepper::moveToSingleRevolutionDir(long absolute, uint8_t dir)
+{
+    absolute = absolute % stepsPerRevolution;
+    short relCurrentPos = _currentPos % stepsPerRevolution;
+
+    //to deal with negative current positions
+    if(relCurrentPos < 0){
+        relCurrentPos = stepsPerRevolution - relCurrentPos;
+    }
+
+    short relative = absolute - relCurrentPos;
+
+    //fixed direction
+    if (dir == 0){ //ccw direction
+        if (relative > 0){
+            relative = relative - stepsPerRevolution;
+        }
+    } else { //cw direction
+        if (relative < 0){
+            relative = stepsPerRevolution + relative;
+        }
+    }
+
+    move(relative);
+}
+
 void AccelStepper::move(long relative)
 {
     moveTo(_currentPos + relative);
@@ -187,7 +243,7 @@ boolean AccelStepper::run()
     return _speed != 0.0 || distanceToGo() != 0;
 }
 
-AccelStepper::AccelStepper(uint8_t interface, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, bool enable)
+AccelStepper::AccelStepper(uint8_t interface, uint8_t hallPin, uint16_t stepsPerRevolution, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, short hallOffset, bool enable)
 {
     _interface = interface;
     _currentPos = 0;
@@ -200,12 +256,19 @@ AccelStepper::AccelStepper(uint8_t interface, uint8_t pin1, uint8_t pin2, uint8_
     _minPulseWidth = 1;
     _enablePin = 0xff;
     _lastStepTime = 0;
-    _pin[0] = pin1;
-    _pin[1] = pin2;
-    _pin[2] = pin3;
-    _pin[3] = pin4;
+    this->pin[0] = pin1;
+    this->pin[1] = pin2;
+    this->pin[2] = pin3;
+    this->pin[3] = pin4;
     _enableInverted = false;
-    
+
+    this->hallPin = hallPin;
+    this->stepsPerRevolution = stepsPerRevolution;
+    this->hallOffset = hallOffset;
+    _hallWasOff = digitalRead(hallPin);
+    _currZeroRevolution = 0;
+    _isZeroed = false;
+
     // NEW
     _n = 0;
     _c0 = 0.0;
@@ -235,10 +298,10 @@ AccelStepper::AccelStepper(void (*forward)(), void (*backward)())
     _minPulseWidth = 1;
     _enablePin = 0xff;
     _lastStepTime = 0;
-    _pin[0] = 0;
-    _pin[1] = 0;
-    _pin[2] = 0;
-    _pin[3] = 0;
+    pin[0] = 0;
+    pin[1] = 0;
+    pin[2] = 0;
+    pin[3] = 0;
     _forward = forward;
     _backward = backward;
 
@@ -351,8 +414,8 @@ void AccelStepper::step(long step)
 }
 
 // You might want to override this to implement eg serial output
-// bit 0 of the mask corresponds to _pin[0]
-// bit 1 of the mask corresponds to _pin[1]
+// bit 0 of the mask corresponds to [0]
+// bit 1 of the mask corresponds to pin[1]
 // ....
 void AccelStepper::setOutputPins(uint8_t mask)
 {
@@ -363,7 +426,7 @@ void AccelStepper::setOutputPins(uint8_t mask)
 	numpins = 3;
     uint8_t i;
     for (i = 0; i < numpins; i++)
-	digitalWrite(_pin[i], (mask & (1 << i)) ? (HIGH ^ _pinInverted[i]) : (LOW ^ _pinInverted[i]));
+	digitalWrite(pin[i], (mask & (1 << i)) ? (HIGH ^ _pinInverted[i]) : (LOW ^ _pinInverted[i]));
 }
 
 // 0 pin step function (ie for functional usage)
@@ -383,7 +446,7 @@ void AccelStepper::step1(long step)
 {
     (void)(step); // Unused
 
-    // _pin[0] is step, _pin[1] is direction
+    // pin[0] is step, pin[1] is direction
     setOutputPins(_direction ? 0b10 : 0b00); // Set direction first else get rogue pulses
     setOutputPins(_direction ? 0b11 : 0b01); // step HIGH
     // Caution 200ns setup time 
@@ -557,16 +620,16 @@ void    AccelStepper::enableOutputs()
     if (! _interface) 
 	return;
 
-    pinMode(_pin[0], OUTPUT);
-    pinMode(_pin[1], OUTPUT);
+    pinMode(pin[0], OUTPUT);
+    pinMode(pin[1], OUTPUT);
     if (_interface == FULL4WIRE || _interface == HALF4WIRE)
     {
-        pinMode(_pin[2], OUTPUT);
-        pinMode(_pin[3], OUTPUT);
+        pinMode(pin[2], OUTPUT);
+        pinMode(pin[3], OUTPUT);
     }
     else if (_interface == FULL3WIRE || _interface == HALF3WIRE)
     {
-        pinMode(_pin[2], OUTPUT);
+        pinMode(pin[2], OUTPUT);
     }
 
     if (_enablePin != 0xff)
@@ -644,6 +707,50 @@ void AccelStepper::stop()
 	else
 	    move(-stepsToStop);
     }
+}
+
+void AccelStepper::initZeroing(uint8_t revolutions)
+{
+    stop();
+    //so you dont have to deal with negative current positions
+    setCurrentPosition(0);
+    //initialize movement with an extra half rotation in case hall sensor is currently tripped
+    move(stepsPerRevolution * revolutions + stepsPerRevolution/2);
+    //set _hallWasOff to current hall value
+    _hallWasOff = digitalRead(hallPin);
+    _currZeroRevolution = 0;
+    _isZeroed = false;
+}
+
+boolean AccelStepper::runZeroing()
+{
+    bool finished = !run();
+    //check hall sensor, if first turned on, if so log position
+    if(!_isZeroed && _hallWasOff && digitalRead(hallPin) == LOW){
+        _hallWasOff = false;
+        _hallTripPosition[_currZeroRevolution] = currentPosition() % stepsPerRevolution;
+        _currZeroRevolution += 1;
+        Serial.println(currentPosition() % stepsPerRevolution);
+    }
+
+    if (digitalRead(hallPin) == HIGH){
+        _hallWasOff = true;
+    }
+
+    if (finished){
+        if(!_isZeroed){
+            _isZeroed = true;
+            short sum = 0;
+            for(int i = 0; i < _currZeroRevolution; i++){
+                sum += _hallTripPosition[i];
+            }
+            moveToSingleRevolution(sum/(_currZeroRevolution)+hallOffset); // move to new zero position and then set to zero
+        }else{
+            setCurrentPosition(0);
+            return true;
+        }
+    }
+    return false;
 }
 
 bool AccelStepper::isRunning()

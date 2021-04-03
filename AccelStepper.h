@@ -370,7 +370,7 @@ public:
     /// to pin 5.
     /// \param[in] enable If this is true (the default), enableOutputs() will be called to enable
     /// the output pins at construction time.
-    AccelStepper(uint8_t interface = AccelStepper::FULL4WIRE, uint8_t pin1 = 2, uint8_t pin2 = 3, uint8_t pin3 = 4, uint8_t pin4 = 5, bool enable = true);
+    AccelStepper(uint8_t interface = AccelStepper::FULL4WIRE, uint8_t hallPin = 6, uint16_t stepsPerRevolution = 0, uint8_t pin1 = 2, uint8_t pin2 = 3, uint8_t pin3 = 4, uint8_t pin4 = 5, short hallOffset = 0, bool enable = true);
 
     /// Alternate Constructor which will call your own functions for forward and backward steps. 
     /// You can have multiple simultaneous steppers, all moving
@@ -388,7 +388,17 @@ public:
     /// If you are trying to use constant speed movements, you should call setSpeed() after calling moveTo().
     /// \param[in] absolute The desired absolute position. Negative is
     /// anticlockwise from the 0 position.
-    void    moveTo(long absolute); 
+    void    moveTo(long absolute);
+
+    /// moves to a position from 0 - (steps per revolution - 1)
+    /// takes shortest path
+    void    moveToSingleRevolution(long absolute);
+
+    /// moves to a position from 0 - (steps per revolution - 1)
+    /// takes fixed direction
+    /// 1 is cw, 0 ccw
+    void    moveToSingleRevolutionDir(long absolute, uint8_t dir);
+
 
     /// Set the target position relative to the current position.
     /// \param[in] relative The desired position relative to the current position. Negative is
@@ -486,6 +496,16 @@ public:
     /// to stop as quickly as possible, using the current speed and acceleration parameters.
     void stop();
 
+    /// zero using the hall sensor
+    /// 8 revolutions and takes the average hall sensor trigger step location
+    /// to set as new 0 position
+    void initZeroing(uint8_t revolutions);
+
+    /// zero using the hall sensor
+    /// 8 revolutions and takes the average hall sensor trigger step location
+    /// to set as new 0 position
+    bool runZeroing();
+
     /// Disable motor pin outputs by setting them all LOW
     /// Depending on the design of your electronics this may turn off
     /// the power to the motor coils, saving power.
@@ -532,6 +552,19 @@ public:
     /// Checks to see if the motor is currently running to a target
     /// \return true if the speed is not zero or not at the target position
     bool    isRunning();
+
+    /// Arduino pin number assignments for the 2 or 4 pins required to interface to the
+    /// stepper motor or driver
+    uint8_t        pin[4];
+
+    /// Pin number of the Hall Sensor
+    uint8_t        hallPin;
+
+    /// Total number of steps for one full revolution
+    uint16_t       stepsPerRevolution;
+
+    /// Hall 0 offset in steps positive is cw
+    short          hallOffset;
 
 protected:
 
@@ -619,13 +652,21 @@ protected:
     boolean _direction; // 1 == CW
     
 private:
+    /// variable for detecting when the hall sensor was tripped on, true if hall was off on last check
+    bool            _hallWasOff;
+
+    /// list of previously tripped hall positions
+    short           _hallTripPosition[5];
+
+    /// this is set true as soon as rotation to a zero position is initialized
+    bool            _isZeroed;
+
+    /// current Revolution of zeroing, used as a index for array of hall trip positions
+    uint8_t         _currZeroRevolution;
+
     /// Number of pins on the stepper motor. Permits 2 or 4. 2 pins is a
     /// bipolar, and 4 pins is a unipolar.
     uint8_t        _interface;          // 0, 1, 2, 4, 8, See MotorInterfaceType
-
-    /// Arduino pin number assignments for the 2 or 4 pins required to interface to the
-    /// stepper motor or driver
-    uint8_t        _pin[4];
 
     /// Whether the _pins is inverted or not
     uint8_t        _pinInverted[4];
