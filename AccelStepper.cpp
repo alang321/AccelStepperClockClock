@@ -35,14 +35,14 @@ void AccelStepper::moveToSingleRevolution(long absolute)
     absolute = absolute % stepsPerRevolution;
     //to deal with negative absolute positions
     if(absolute < 0){
-        absolute = stepsPerRevolution - absolute;
+        absolute = stepsPerRevolution + absolute;
     }
 
     short relCurrentPos = _currentPos % stepsPerRevolution;
 
     //to deal with negative current positions
     if(relCurrentPos < 0){
-        relCurrentPos = stepsPerRevolution - relCurrentPos;
+        relCurrentPos = stepsPerRevolution + relCurrentPos;
     }
 
     short relative = absolute - relCurrentPos;
@@ -63,11 +63,16 @@ void AccelStepper::moveToSingleRevolution(long absolute)
 void AccelStepper::moveToSingleRevolutionDir(long absolute, uint8_t dir)
 {
     absolute = absolute % stepsPerRevolution;
+    //to deal with negative absolute positions
+    if(absolute < 0){
+        absolute = stepsPerRevolution + absolute;
+    }
+
     short relCurrentPos = _currentPos % stepsPerRevolution;
 
     //to deal with negative current positions
     if(relCurrentPos < 0){
-        relCurrentPos = stepsPerRevolution - relCurrentPos;
+        relCurrentPos = stepsPerRevolution + relCurrentPos;
     }
 
     short relative = absolute - relCurrentPos;
@@ -243,9 +248,9 @@ boolean AccelStepper::run()
     return _speed != 0.0 || distanceToGo() != 0;
 }
 
-AccelStepper::AccelStepper(uint8_t interface, uint8_t hallPin, uint16_t stepsPerRevolution, uint8_t pin1, uint8_t pin2, uint8_t pin3, uint8_t pin4, short hallOffset, bool enable)
+AccelStepper::AccelStepper(uint8_t pin1, uint8_t pin2, uint8_t hallPin, short hallOffset, uint16_t stepsPerRevolution)
 {
-    _interface = interface;
+    _interface = DRIVER;
     _currentPos = 0;
     _targetPos = 0;
     _speed = 0.0;
@@ -258,8 +263,8 @@ AccelStepper::AccelStepper(uint8_t interface, uint8_t hallPin, uint16_t stepsPer
     _lastStepTime = 0;
     this->pin[0] = pin1;
     this->pin[1] = pin2;
-    this->pin[2] = pin3;
-    this->pin[3] = pin4;
+    this->pin[2] = 0;
+    this->pin[3] = 0;
     _enableInverted = false;
 
     this->hallPin = hallPin;
@@ -278,9 +283,7 @@ AccelStepper::AccelStepper(uint8_t interface, uint8_t hallPin, uint16_t stepsPer
 
     int i;
     for (i = 0; i < 4; i++)
-	_pinInverted[i] = 0;
-    if (enable)
-	enableOutputs();
+        _pinInverted[i] = 0;
     // Some reasonable default
     setAcceleration(1);
 }

@@ -370,7 +370,7 @@ public:
     /// to pin 5.
     /// \param[in] enable If this is true (the default), enableOutputs() will be called to enable
     /// the output pins at construction time.
-    AccelStepper(uint8_t interface = AccelStepper::FULL4WIRE, uint8_t hallPin = 6, uint16_t stepsPerRevolution = 0, uint8_t pin1 = 2, uint8_t pin2 = 3, uint8_t pin3 = 4, uint8_t pin4 = 5, short hallOffset = 0, bool enable = true);
+    AccelStepper(uint8_t pin1, uint8_t pin2, uint8_t hallPin, short hallOffset, uint16_t stepsPerRevolution);
 
     /// Alternate Constructor which will call your own functions for forward and backward steps. 
     /// You can have multiple simultaneous steppers, all moving
@@ -655,11 +655,13 @@ protected:
     boolean _direction; // 1 == CW
     
 private:
+
     /// variable for detecting when the hall sensor was tripped on, true if hall was off on last check
     bool            _hallWasOff;
 
     /// list of previously tripped hall positions
-    short           _hallTripPosition[5];
+    /// maximum of 20 revolutions
+    short           _hallTripPosition[20];
 
     /// this is set true as soon as rotation to a zero position is initialized
     bool            _isZeroed;
