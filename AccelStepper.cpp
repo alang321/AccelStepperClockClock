@@ -726,7 +726,9 @@ void AccelStepper::setPinModesDriver()
 {
     pinMode(pin[0], OUTPUT);
     pinMode(pin[1], OUTPUT);
-    pinMode(hallPin, INPUT);
+    if(hallPin != -1){
+        pinMode(hallPin, INPUT);
+    }
 }
 
 bool AccelStepper::isRunning()

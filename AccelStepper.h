@@ -370,7 +370,7 @@ public:
     /// to pin 5.
     /// \param[in] enable If this is true (the default), enableOutputs() will be called to enable
     /// the output pins at construction time.
-    AccelStepper(uint8_t pin1, uint8_t pin2, uint16_t stepsPerRevolution, uint8_t hallPin = 0, short hallOffset = 0);
+    AccelStepper(uint8_t pin1, uint8_t pin2, uint16_t stepsPerRevolution, uint8_t hallPin = -1, short hallOffset = 0);
 
     /// sets pin modes for 2 pin driver and hall sensor with external pull up resistor
     void    setPinModesDriver();
