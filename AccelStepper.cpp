@@ -248,7 +248,7 @@ boolean AccelStepper::run()
     return _speed != 0.0 || distanceToGo() != 0;
 }
 
-AccelStepper::AccelStepper(uint8_t pin1, uint8_t pin2, uint8_t hallPin, short hallOffset, uint16_t stepsPerRevolution)
+AccelStepper::AccelStepper(uint8_t pin1, uint8_t pin2, uint16_t stepsPerRevolution, uint8_t hallPin, short hallOffset)
 {
     _interface = DRIVER;
     _currentPos = 0;
@@ -284,40 +284,6 @@ AccelStepper::AccelStepper(uint8_t pin1, uint8_t pin2, uint8_t hallPin, short ha
     int i;
     for (i = 0; i < 4; i++)
         _pinInverted[i] = 0;
-    // Some reasonable default
-    setAcceleration(1);
-}
-
-AccelStepper::AccelStepper(void (*forward)(), void (*backward)())
-{
-    _interface = 0;
-    _currentPos = 0;
-    _targetPos = 0;
-    _speed = 0.0;
-    _maxSpeed = 1.0;
-    _acceleration = 0.0;
-    _sqrt_twoa = 1.0;
-    _stepInterval = 0;
-    _minPulseWidth = 1;
-    _enablePin = 0xff;
-    _lastStepTime = 0;
-    pin[0] = 0;
-    pin[1] = 0;
-    pin[2] = 0;
-    pin[3] = 0;
-    _forward = forward;
-    _backward = backward;
-
-    // NEW
-    _n = 0;
-    _c0 = 0.0;
-    _cn = 0.0;
-    _cmin = 1.0;
-    _direction = DIRECTION_CCW;
-
-    int i;
-    for (i = 0; i < 4; i++)
-	_pinInverted[i] = 0;
     // Some reasonable default
     setAcceleration(1);
 }

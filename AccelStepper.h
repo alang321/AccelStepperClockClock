@@ -370,17 +370,7 @@ public:
     /// to pin 5.
     /// \param[in] enable If this is true (the default), enableOutputs() will be called to enable
     /// the output pins at construction time.
-    AccelStepper(uint8_t pin1, uint8_t pin2, uint8_t hallPin, short hallOffset, uint16_t stepsPerRevolution);
-
-    /// Alternate Constructor which will call your own functions for forward and backward steps. 
-    /// You can have multiple simultaneous steppers, all moving
-    /// at different speeds and accelerations, provided you call their run()
-    /// functions at frequent enough intervals. Current Position is set to 0, target
-    /// position is set to 0. MaxSpeed and Acceleration default to 1.0.
-    /// Any motor initialization should happen before hand, no pins are used or initialized.
-    /// \param[in] forward void-returning procedure that will make a forward step
-    /// \param[in] backward void-returning procedure that will make a backward step
-    AccelStepper(void (*forward)(), void (*backward)());
+    AccelStepper(uint8_t pin1, uint8_t pin2, uint16_t stepsPerRevolution, uint8_t hallPin = 0, short hallOffset = 0);
 
     /// sets pin modes for 2 pin driver and hall sensor with external pull up resistor
     void    setPinModesDriver();
