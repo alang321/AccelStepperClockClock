@@ -385,7 +385,7 @@ public:
 
     /// moves to a position from 0 - (steps per revolution - 1)
     /// takes shortest path
-    void    moveToSingleRevolution(long absolute);
+    void    moveToShortestPath(long absolute);
 
     /// moves to a position from 0 - (steps per revolution - 1)
     /// takes fixed direction
